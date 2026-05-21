@@ -46,7 +46,7 @@ try
     builder.Host.UseNLog();
 
     builder.Services.AddDbContext<ProxyDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("ProxyDatabase")));
+        options.UseSqlServer(builder.Configuration.GetConnectionString("StarLIMSDB")));
 
     builder.Services.AddControllersWithViews();
 
