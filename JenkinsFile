@@ -6,12 +6,12 @@ pipeline {
     stages {
         stage('Restore packages') {
             steps {
-                bat '"C:\Program Files\dotnet\dotnet" restore "MessageProxyApi.csproj"'
+                bat '"C:\\Program Files\\dotnet\\dotnet" restore "MessageProxyApi.csproj"'
             }
         }
         stage('Clean Previous Build') {
             steps {
-                bat '"C:\Program Files\dotnet\dotnet" clean "MessageProxyApi.csproj"'
+                bat '"C:\\Program Files\\dotnet\\dotnet" clean "MessageProxyApi.csproj"'
             }
         }
         stage('Build for test') {
@@ -19,7 +19,7 @@ pipeline {
                 expression { params.Branch == 'development' }
             }
             steps {
-                bat '"C:\Program Files\dotnet\dotnet" publish "MessageProxyApi.csproj" -c "Release" /p:EnvironmentName=Test'
+                bat '"C:\\Program Files\\dotnet\\dotnet" publish "MessageProxyApi.csproj" -c "Release" /p:EnvironmentName=Test'
             }
         }
         stage('Build for prod') {
@@ -27,13 +27,13 @@ pipeline {
                 expression { params.Branch == "main" }
             }
             steps {
-                bat '"C:\Program Files\dotnet\dotnet" publish "MessageProxyApi.csproj" -c "Release" /p:EnvironmentName=Production'
+                bat '"C:\\Program Files\\dotnet\\dotnet" publish "MessageProxyApi.csproj" -c "Release" /p:EnvironmentName=Production'
             }
         }
         /*
         stage('Tests') {
             steps {
-                bat '"C:\Program Files\dotnet\dotnet" test ./test/Viper.test.csproj -e Test --logger "junit" --configuration release --nologo'
+                bat '"C:\\Program Files\\dotnet\\dotnet" test ./test/Viper.test.csproj -e Test --logger "junit" --configuration release --nologo'
             }
         }
         */
@@ -43,8 +43,8 @@ pipeline {
             }
             steps {
                 bat 'type NUL > app_offline.htm'
-                bat 'robocopy "." "C:\inetpub\wwwroot\messageproxy-test" /IF app_offline.htm /S /E /DCOPY:DA /COPY:DAT /PURGE /MIR /R:10 /W:3) & IF %ERRORLEVEL% LSS 8 EXIT /B 0'
-                bat 'robocopy ".\\bin\\Release\\net10.0\\publish" "C:\inetpub\wwwroot\messageproxy-test" /S /E /DCOPY:DA /COPY:DAT /PURGE /MIR /R:10 /W:3) & IF %ERRORLEVEL% LSS 8 EXIT /B 0'
+                bat 'robocopy "." "C:\\inetpub\\wwwroot\\messageproxy-test" /IF app_offline.htm /S /E /DCOPY:DA /COPY:DAT /PURGE /MIR /R:10 /W:3) & IF %ERRORLEVEL% LSS 8 EXIT /B 0'
+                bat 'robocopy ".\\bin\\Release\\net10.0\\publish" "C:\\inetpub\\wwwroot\\messageproxy-test" /S /E /DCOPY:DA /COPY:DAT /PURGE /MIR /R:10 /W:3) & IF %ERRORLEVEL% LSS 8 EXIT /B 0'
             }
         }
         stage('Deploy to prod') {
@@ -53,8 +53,8 @@ pipeline {
             }
             steps {
                 bat 'type NUL > app_offline.htm'
-                bat 'robocopy "." "C:\inetpub\wwwroot\messageproxy" /IF app_offline.htm /S /E /DCOPY:DA /COPY:DAT /PURGE /MIR /R:10 /W:3) & IF %ERRORLEVEL% LSS 8 EXIT /B 0'
-                bat 'robocopy ".\\bin\\Release\\net10.0\\publish" "C:\inetpub\wwwroot\messageproxy" /S /E /DCOPY:DA /COPY:DAT /PURGE /MIR /R:10 /W:3) & IF %ERRORLEVEL% LSS 8 EXIT /B 0'
+                bat 'robocopy "." "C:\\inetpub\\wwwroot\\messageproxy" /IF app_offline.htm /S /E /DCOPY:DA /COPY:DAT /PURGE /MIR /R:10 /W:3) & IF %ERRORLEVEL% LSS 8 EXIT /B 0'
+                bat 'robocopy ".\\bin\\Release\\net10.0\\publish" "C:\\inetpub\\wwwroot\\messageproxy" /S /E /DCOPY:DA /COPY:DAT /PURGE /MIR /R:10 /W:3) & IF %ERRORLEVEL% LSS 8 EXIT /B 0'
             }
         }
     }
