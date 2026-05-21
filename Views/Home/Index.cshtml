@@ -20,7 +20,7 @@
         </div>
         <div>
             <button type="submit">Filter</button>
-            <a href="/" style="margin-left:0.5rem;">Clear</a>
+            <a href='@Url.Action("Index","Home")' style="margin-left:0.5rem;">Clear</a>
         </div>
     </div>
 </form>
@@ -48,7 +48,7 @@ else
             @foreach (var item in Model.Messages)
             {
                 <tr style="border-bottom:1px solid #f0f0f0;">
-                    <td style="padding:8px; vertical-align:top;"><a href="/Home/Details/@item.MessageId">@item.MessageId</a></td>
+                    <td style="padding:8px; vertical-align:top;"><a href='@Url.Action("Details","Home", new { id = item.MessageId })'>@item.MessageId</a></td>
                     <td style="padding:8px; vertical-align:top;">@item.Received.ToString("yyyy-MM-dd HH:mm:ss")</td>
                     <td style="padding:8px; vertical-align:top;">@item.ResponseStatus</td>
                     <td style="padding:8px; vertical-align:top;">@item.ErrorMessage</td>
