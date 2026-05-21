@@ -1,0 +1,43 @@
+# Build results
+bin/
+obj/
+publish/
+
+# Visual Studio
+.vs/
+.vscode/
+*.sln.iml
+*.user
+*.userprefs
+
+# Visual Studio Code
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# NLog
+Logs/
+internal-*.txt
+
+# Application
+awscredentials.xml
+app_offline.htm
+
+# OS
+.DS_Store
+Thumbs.db
+*.bak
+
+# Dependencies (if using package-lock, nuget lock files)
+packages/
+.nuget/
+
+# Environment-specific files
+appsettings.Production.json
+appsettings.Test.json

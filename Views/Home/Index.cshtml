@@ -1,0 +1,90 @@
+@model MessageProxyApi.Models.MessageLogViewModel
+
+@{
+    ViewData["Title"] = "Message Log";
+    string startDateQuery = Model.StartDate.HasValue ? $"&startDate={Model.StartDate:yyyy-MM-dd}" : string.Empty;
+    string endDateQuery = Model.EndDate.HasValue ? $"&endDate={Model.EndDate:yyyy-MM-dd}" : string.Empty;
+}
+
+<h1>Message Log</h1>
+
+<form method="get" class="message-filter-form" style="margin-bottom:20px;">
+    <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end;">
+        <div>
+            <label for="startDate">Start date</label><br />
+            <input type="date" id="startDate" name="startDate" value="@(Model.StartDate?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div>
+            <label for="endDate">End date</label><br />
+            <input type="date" id="endDate" name="endDate" value="@(Model.EndDate?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div>
+            <button type="submit">Filter</button>
+            <a href="/" style="margin-left:0.5rem;">Clear</a>
+        </div>
+    </div>
+</form>
+
+<p>Showing page <strong>@Model.Page</strong> of <strong>@Model.TotalPages</strong> — @Model.TotalCount message(s)</p>
+
+@if (!Model.Messages.Any())
+{
+    <p>No message log entries matched the selected date range.</p>
+}
+else
+{
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="text-align:left; border-bottom:1px solid #ccc;">
+                <th style="padding:8px;">ID</th>
+                <th style="padding:8px;">Received</th>
+                <th style="padding:8px;">Status</th>
+                <th style="padding:8px;">Error</th>
+                <th style="padding:8px;">Message content</th>
+                <th style="padding:8px;">Response content</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.Messages)
+            {
+                <tr style="border-bottom:1px solid #f0f0f0;">
+                    <td style="padding:8px; vertical-align:top;"><a href="/Home/Details/@item.MessageId">@item.MessageId</a></td>
+                    <td style="padding:8px; vertical-align:top;">@item.Received.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    <td style="padding:8px; vertical-align:top;">@item.ResponseStatus</td>
+                    <td style="padding:8px; vertical-align:top;">@item.ErrorMessage</td>
+                    <td style="padding:8px; vertical-align:top; white-space:pre-wrap; word-break:break-word;">@((item.MessageContent?.Length > 200) ? item.MessageContent.Substring(0, 200) + "..." : item.MessageContent)</td>
+                    <td style="padding:8px; vertical-align:top; white-space:pre-wrap; word-break:break-word;">@((item.ResponseContent?.Length > 200) ? item.ResponseContent.Substring(0, 200) + "..." : item.ResponseContent)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (Model.TotalPages > 1)
+    {
+        <div style="margin-top:20px; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+            @if (Model.HasPreviousPage)
+            {
+                <a href="?page=1@startDateQuery@endDateQuery">First</a>
+                <a href="?page=@(Model.Page - 1)@startDateQuery@endDateQuery">Previous</a>
+            }
+            else
+            {
+                <span style="color:#999;">First</span>
+                <span style="color:#999;">Previous</span>
+            }
+
+            <span>Page @Model.Page of @Model.TotalPages</span>
+
+            @if (Model.HasNextPage)
+            {
+                <a href="?page=@(Model.Page + 1)@startDateQuery@endDateQuery">Next</a>
+                <a href="?page=@Model.TotalPages@startDateQuery@endDateQuery">Last</a>
+            }
+            else
+            {
+                <span style="color:#999;">Next</span>
+                <span style="color:#999;">Last</span>
+            }
+        </div>
+    }
+}

@@ -1,0 +1,40 @@
+@model MessageProxyApi.Models.CProxyMessage
+
+@{
+    ViewData["Title"] = "Message Details";
+}
+
+<h1>Message Details</h1>
+
+<div style="margin-bottom:20px;">
+    <a href="/">&larr; Back to message log</a>
+</div>
+
+<table style="width:100%; border-collapse:collapse;">
+    <tbody>
+        <tr>
+            <th style="text-align:left; padding:8px; width:180px;">Message ID</th>
+            <td style="padding:8px;">@Model.MessageId</td>
+        </tr>
+        <tr style="background:#f9f9f9;">
+            <th style="text-align:left; padding:8px;">Received</th>
+            <td style="padding:8px;">@Model.Received.ToString("yyyy-MM-dd HH:mm:ss")</td>
+        </tr>
+        <tr>
+            <th style="text-align:left; padding:8px;">Response Status</th>
+            <td style="padding:8px;">@Model.ResponseStatus</td>
+        </tr>
+        <tr style="background:#f9f9f9;">
+            <th style="text-align:left; padding:8px;">Error Message</th>
+            <td style="padding:8px; white-space:pre-wrap; word-break:break-word;">@Model.ErrorMessage</td>
+        </tr>
+        <tr>
+            <th style="text-align:left; padding:8px;">Message Content</th>
+            <td style="padding:8px; white-space:pre-wrap; word-break:break-word;">@Model.MessageContent</td>
+        </tr>
+        <tr style="background:#f9f9f9;">
+            <th style="text-align:left; padding:8px;">Response Content</th>
+            <td style="padding:8px; white-space:pre-wrap; word-break:break-word;">@Model.ResponseContent</td>
+        </tr>
+    </tbody>
+</table>
