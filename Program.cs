@@ -45,6 +45,9 @@ try
     builder.Logging.SetMinimumLevel(Microsoft.Extensions.Logging.LogLevel.Information);
     builder.Host.UseNLog();
 
+    // Register IHttpClientFactory so controllers can inject IHttpClientFactory
+    builder.Services.AddHttpClient();
+
     builder.Services.AddDbContext<ProxyDbContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("StarLIMSDB")));
 
