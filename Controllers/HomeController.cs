@@ -1,17 +1,21 @@
 using MessageProxyApi.Data;
 using MessageProxyApi.Models;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 
 namespace MessageProxyApi.Controllers
 {
     public class HomeController : Controller
     {
+        private readonly ILogger<HomeController> _logger;
         private readonly ProxyDbContext _dbContext;
         private const int PageSize = 100;
 
-        public HomeController(ProxyDbContext dbContext)
+        public HomeController(ILogger<HomeController> logger, ProxyDbContext dbContext)
         {
+            _logger = logger;
             _dbContext = dbContext;
         }
 
@@ -70,7 +74,21 @@ namespace MessageProxyApi.Controllers
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
-            return View();
+            var exceptionHandlerFeature = HttpContext.Features.Get<IExceptionHandlerFeature>();
+            var exception = exceptionHandlerFeature?.Error;
+
+            if (exception is not null)
+            {
+                _logger.LogError(exception, "Unhandled exception occurred while processing the request.");
+            }
+
+            var model = new ErrorViewModel
+            {
+                RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier,
+                Message = exception?.Message ?? "An unexpected error occurred."
+            };
+
+            return View(model);
         }
     }
 }

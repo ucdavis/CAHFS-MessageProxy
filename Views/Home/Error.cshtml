@@ -1,6 +1,13 @@
+@model MessageProxyApi.Models.ErrorViewModel
+
 @{
     ViewData["Title"] = "Error";
 }
 
 <h1>Oops!</h1>
-<p>An unexpected error occurred. Please try again later.</p>
+<p>@Model.Message</p>
+
+@if (Model.ShowRequestId)
+{
+    <p>Request ID: <strong>@Model.RequestId</strong></p>
+}
