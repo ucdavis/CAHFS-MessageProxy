@@ -60,7 +60,7 @@ namespace MessageProxyApi.Controllers
                     _logger.LogError(ex, "Error saving proxy message: {Message}", ex.Message);
                 }
                 
-                string? apiKey = _configuration["NAHLNAPIKey"];
+                string? apiKey = _configuration["config:NAHLNAPIKey"];
 
                 var client = _httpClientFactory.CreateClient();
                 client.Timeout = TimeSpan.FromMinutes(10);
