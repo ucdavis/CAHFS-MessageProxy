@@ -3,9 +3,15 @@ using Amazon.Extensions.Configuration.SystemsManager;
 using Amazon.Extensions.NETCore.Setup;
 using Amazon.Runtime.CredentialManagement;
 using MessageProxyApi.Data;
+using MessageProxyApi.Models;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using NLog;
 using NLog.Web;
+using System.Security.Claims;
 using System.Xml.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -46,14 +52,47 @@ try
     builder.Host.UseNLog();
 
     // Register IHttpClientFactory so controllers can inject IHttpClientFactory
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddMemoryCache();
     builder.Services.AddHttpClient();
+
+    builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+        .AddCookie(options =>
+        {
+            options.Cookie.Name = "MessageProxy.Authentication.UCD";
+            options.LoginPath = new PathString("/Login");
+            options.AccessDeniedPath = new PathString("/Denied");
+            options.ExpireTimeSpan = TimeSpan.FromHours(12);
+        });
+
+    var allowedLoginIds = builder.Configuration.GetSection("AuthorizedLoginIds").Get<string[]>() ?? Array.Empty<string>();
+
+    builder.Services.AddSingleton<IAuthorizationHandler, AuthorizedLoginHandler>();
+    builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("AuthorizedLogin", policy =>
+            policy.RequireClaim(ClaimTypes.AuthenticationMethod, "CAS")
+                .AddRequirements(new AuthorizedLoginRequirement(allowedLoginIds)));
+    });
+
+    builder.Services.Configure<CasSettings>(builder.Configuration.GetSection("Cas"));
 
     builder.Services.AddDbContext<ProxyDbContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("StarLIMSDB")));
 
     builder.Services.AddControllersWithViews();
 
+    builder.Services.AddRazorPages(options =>
+    {
+        options.Conventions.AllowAnonymousToPage("/Login");
+        options.Conventions.AllowAnonymousToPage("/CasLogin");
+        options.Conventions.AllowAnonymousToPage("/Denied");
+    });
+
     var app = builder.Build();
+
+    //app.Services.GetService<IMemoryCache>(), 
+    HttpHelper.Configure(builder.Configuration, app.Environment, app.Services.GetService<IHttpContextAccessor>());
 
     if (!app.Environment.IsDevelopment())
     {
@@ -70,12 +109,14 @@ try
 
     app.UseRouting();
 
+    app.UseAuthentication();
     app.UseAuthorization();
 
     app.MapControllerRoute(
         name: "default",
         pattern: "{controller=Home}/{action=Index}/{id?}");
 
+    app.MapRazorPages();
     app.MapControllers();
 
     app.Run();

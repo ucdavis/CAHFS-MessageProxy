@@ -1,5 +1,6 @@
 using MessageProxyApi.Data;
 using MessageProxyApi.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,7 @@ using System.Diagnostics;
 
 namespace MessageProxyApi.Controllers
 {
+    [Authorize(Policy = "AuthorizedLogin")]
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
@@ -71,6 +73,7 @@ namespace MessageProxyApi.Controllers
             return View(message);
         }
 
+        [AllowAnonymous]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {

@@ -1,5 +1,6 @@
 using MessageProxyApi.Data;
 using MessageProxyApi.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.IO;
 using System.Net.Http;
@@ -8,6 +9,7 @@ using System.Text;
 namespace MessageProxyApi.Controllers
 {
     [ApiController]
+    [AllowAnonymous]
     [Route("api/[controller]")]
     public class MessageProxyController : ControllerBase
     {
