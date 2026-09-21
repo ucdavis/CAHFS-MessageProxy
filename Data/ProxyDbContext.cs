@@ -45,6 +45,11 @@ namespace MessageProxyApi.Data
                 entity.Property(e => e.ResponseContent)
                     .HasColumnName("ResponseContent")
                     .HasColumnType("text");
+
+                entity.Property(e => e.MessageType)
+                    .HasColumnName("MessageType")
+                    .HasMaxLength(10)
+                    .HasColumnType("varchar(10)");
             });
         }
     }

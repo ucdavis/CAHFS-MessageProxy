@@ -17,9 +17,8 @@ namespace MessageProxyApi.Controllers
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
         private readonly ProxyDbContext _dbContext;
-        private const string ProxyServiceUrl = "https://mrpvsmsg.aphis.usda.gov/PublisherService/PublisherServiceApi/api/publish/LMS";
 
-        public MessageProxyController(ILogger<MessageProxyController> logger, IHttpClientFactory httpClientFactory, 
+        public MessageProxyController(ILogger<MessageProxyController> logger, IHttpClientFactory httpClientFactory,
             IConfiguration configuration, ProxyDbContext dbContext)
         {
             _logger = logger;
@@ -28,14 +27,45 @@ namespace MessageProxyApi.Controllers
             _dbContext = dbContext;
         }
 
-        /// <summary>  
+        /// <summary>
         /// Function to receive a post from Rhapsodty and proxy to the NAHLN. Records the request and response in the database.
         /// </summary>
         [HttpPost]
         public async Task<IActionResult> ProxyMessage()
         {
+            return await ProxyMessageAsync(_configuration["ProxyServiceUrls:NAHLN"], CProxyMessage.NahlnMessageType,
+                "application/xml", _configuration["config:NAHLNAPIKey"], "x-auth-token");
+        }
+
+        /// <summary>
+        /// Function to receive a post from Rhapsody and proxy to the CDFA lab order service. Records the request and response in the database.
+        /// </summary>
+        [HttpPost("CDFA")]
+        public async Task<IActionResult> ProxyCdfaMessage()
+        {
+            // Pass the caller's content type through to CDFA, falling back to XML when it isn't supplied.
+            var contentType = string.IsNullOrWhiteSpace(Request.ContentType)
+                ? "application/xml"
+                : Request.ContentType.Split(';')[0].Trim();
+
+            return await ProxyMessageAsync(_configuration["ProxyServiceUrls:CDFA"], CProxyMessage.CdfaMessageType,
+                contentType, _configuration["config:CDFAAuthKey"], "AuthID");
+        }
+
+        /// <summary>
+        /// Reads the request body, logs it, posts it to the given service, and records the response.
+        /// </summary>
+        private async Task<IActionResult> ProxyMessageAsync(string? serviceUrl, string messageType, string contentType,
+            string? apiKey, string apiKeyHeaderName)
+        {
             try
             {
+                if (string.IsNullOrWhiteSpace(serviceUrl))
+                {
+                    _logger.LogError("{MessageType} service URL is not configured.", messageType);
+                    return StatusCode(500, new { error = $"{messageType} service URL is not configured." });
+                }
+
                 using var reader = new StreamReader(Request.Body, Encoding.UTF8);
                 string body = await reader.ReadToEndAsync();
 
@@ -44,12 +74,13 @@ namespace MessageProxyApi.Controllers
                 var messageLogCreated = false;
                 CProxyMessage? messageLog = null;
 
-                try 
+                try
                 {
-                    messageLog = new CProxyMessage 
-                    { 
-                        MessageContent = body, 
-                        Received = DateTime.UtcNow 
+                    messageLog = new CProxyMessage
+                    {
+                        MessageContent = body,
+                        Received = DateTime.UtcNow,
+                        MessageType = messageType
                     };
                     _dbContext.CProxyMessages.Add(messageLog);
                     await _dbContext.SaveChangesAsync();
@@ -59,26 +90,24 @@ namespace MessageProxyApi.Controllers
                 {
                     _logger.LogError(ex, "Error saving proxy message: {Message}", ex.Message);
                 }
-                
-                string? apiKey = _configuration["config:NAHLNAPIKey"];
 
                 var client = _httpClientFactory.CreateClient();
                 client.Timeout = TimeSpan.FromMinutes(10);
 
-                var request = new HttpRequestMessage(HttpMethod.Post, ProxyServiceUrl);
+                var request = new HttpRequestMessage(HttpMethod.Post, serviceUrl);
 
                 // Note: Content-Specific headers go on the HttpContent object, not the request object directly
-                var content = new StringContent(body, Encoding.UTF8, "application/xml");
+                var content = new StringContent(body, Encoding.UTF8, contentType);
                 request.Content = content;
 
                 // Request headers
-                request.Headers.Accept.ParseAdd("application/xml");
+                request.Headers.Accept.ParseAdd(contentType);
                 if (!string.IsNullOrEmpty(apiKey))
                 {
-                    request.Headers.Add("x-auth-token", apiKey);
+                    request.Headers.Add(apiKeyHeaderName, apiKey);
                 }
 
-                _logger.LogInformation("NAHLN request body (first 500 chars): {Body}", 
+                _logger.LogInformation("{MessageType} request body (first 500 chars): {Body}", messageType,
                     body.Length > 500 ? body.Substring(0, 500) : body);
 
                 var response = await client.SendAsync(request);
@@ -100,17 +129,17 @@ namespace MessageProxyApi.Controllers
                 // Check if external API returned an error status (throws to catch block like request-promise does)
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogError("NAHLN response status: {StatusCode}", (int)response.StatusCode);
-                    _logger.LogError("NAHLN response body: {ResponseBody}", result);
+                    _logger.LogError("{MessageType} response status: {StatusCode}", messageType, (int)response.StatusCode);
+                    _logger.LogError("{MessageType} response body: {ResponseBody}", messageType, result);
                     return StatusCode((int)response.StatusCode, new { error = $"Upstream error: {response.ReasonPhrase}" });
                 }
 
                 // 7. Return 200 OK with the XML/String result
-                return Content(result, "application/xml", Encoding.UTF8);
+                return Content(result, contentType, Encoding.UTF8);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "NAHLN error: {Message}", ex.Message);
+                _logger.LogError(ex, "{MessageType} error: {Message}", messageType, ex.Message);
                 return StatusCode(500, new { error = ex.Message });
             }
         }

@@ -38,6 +38,7 @@ else
             <tr style="text-align:left; border-bottom:1px solid #ccc;">
                 <th style="padding:8px;">ID</th>
                 <th style="padding:8px;">Received</th>
+                <th style="padding:8px;">Type</th>
                 <th style="padding:8px;">Status</th>
                 <th style="padding:8px;">Error</th>
                 <th style="padding:8px;">Message content</th>
@@ -50,6 +51,7 @@ else
                 <tr style="border-bottom:1px solid #f0f0f0;">
                     <td style="padding:8px; vertical-align:top;"><a href='@Url.Action("Details","Home", new { id = item.MessageId })'>@item.MessageId</a></td>
                     <td style="padding:8px; vertical-align:top;">@item.Received.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    <td style="padding:8px; vertical-align:top;">@item.MessageType</td>
                     <td style="padding:8px; vertical-align:top;">@item.ResponseStatus</td>
                     <td style="padding:8px; vertical-align:top;">@item.ErrorMessage</td>
                     <td style="padding:8px; vertical-align:top; white-space:pre-wrap; word-break:break-word;">@((item.MessageContent?.Length > 200) ? item.MessageContent.Substring(0, 200) + "..." : item.MessageContent)</td>
