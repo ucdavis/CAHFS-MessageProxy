@@ -4,6 +4,7 @@
     ViewData["Title"] = "Message Log";
     string startDateQuery = Model.StartDate.HasValue ? $"&startDate={Model.StartDate:yyyy-MM-dd}" : string.Empty;
     string endDateQuery = Model.EndDate.HasValue ? $"&endDate={Model.EndDate:yyyy-MM-dd}" : string.Empty;
+    string messageTypeQuery = string.IsNullOrEmpty(Model.MessageType) ? string.Empty : $"&messageType={Uri.EscapeDataString(Model.MessageType)}";
 }
 
 <h1>Message Log</h1>
@@ -19,6 +20,16 @@
             <input type="date" id="endDate" name="endDate" value="@(Model.EndDate?.ToString("yyyy-MM-dd"))" />
         </div>
         <div>
+            <label for="messageType">Message type</label><br />
+            <select id="messageType" name="messageType">
+                <option value="">All types</option>
+                @foreach (var type in MessageProxyApi.Models.MessageLogViewModel.MessageTypes)
+                {
+                    <option value="@type" selected="@(string.Equals(Model.MessageType, type, StringComparison.OrdinalIgnoreCase))">@type</option>
+                }
+            </select>
+        </div>
+        <div>
             <button type="submit">Filter</button>
             <a href='@Url.Action("Index","Home")' style="margin-left:0.5rem;">Clear</a>
         </div>
@@ -29,7 +40,7 @@
 
 @if (!Model.Messages.Any())
 {
-    <p>No message log entries matched the selected date range.</p>
+    <p>No message log entries matched the selected filters.</p>
 }
 else
 {
@@ -66,8 +77,8 @@ else
         <div style="margin-top:20px; display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
             @if (Model.HasPreviousPage)
             {
-                <a href="?page=1@startDateQuery@endDateQuery">First</a>
-                <a href="?page=@(Model.Page - 1)@startDateQuery@endDateQuery">Previous</a>
+                <a href="?page=1@startDateQuery@endDateQuery@messageTypeQuery">First</a>
+                <a href="?page=@(Model.Page - 1)@startDateQuery@endDateQuery@messageTypeQuery">Previous</a>
             }
             else
             {
@@ -79,8 +90,8 @@ else
 
             @if (Model.HasNextPage)
             {
-                <a href="?page=@(Model.Page + 1)@startDateQuery@endDateQuery">Next</a>
-                <a href="?page=@Model.TotalPages@startDateQuery@endDateQuery">Last</a>
+                <a href="?page=@(Model.Page + 1)@startDateQuery@endDateQuery@messageTypeQuery">Next</a>
+                <a href="?page=@Model.TotalPages@startDateQuery@endDateQuery@messageTypeQuery">Last</a>
             }
             else
             {

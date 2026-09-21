@@ -9,7 +9,14 @@ namespace MessageProxyApi.Models
         public int TotalCount { get; set; }
         public DateOnly? StartDate { get; set; }
         public DateOnly? EndDate { get; set; }
+        public string? MessageType { get; set; }
         public List<CProxyMessage> Messages { get; set; } = new();
+
+        public static readonly string[] MessageTypes =
+        {
+            CProxyMessage.NahlnMessageType,
+            CProxyMessage.CdfaMessageType
+        };
 
         public int TotalPages => PageSize <= 0 ? 0 : (int)Math.Ceiling(TotalCount / (double)PageSize);
         public bool HasPreviousPage => Page > 1;

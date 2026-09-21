@@ -21,11 +21,27 @@ namespace MessageProxyApi.Controllers
             _dbContext = dbContext;
         }
 
-        public IActionResult Index(int? page = 1, DateOnly? startDate = null, DateOnly? endDate = null)
+        public IActionResult Index(int? page = 1, DateOnly? startDate = null, DateOnly? endDate = null, string? messageType = null)
         {
             var currentPage = Math.Max(page.GetValueOrDefault(1), 1);
 
+            var selectedType = MessageLogViewModel.MessageTypes
+                .FirstOrDefault(t => string.Equals(t, messageType, StringComparison.OrdinalIgnoreCase));
+
             var query = _dbContext.CProxyMessages.AsQueryable();
+
+            if (selectedType is not null)
+            {
+                if (selectedType == CProxyMessage.NahlnMessageType)
+                {
+                    // Messages logged before the MessageType column existed were all NAHLN.
+                    query = query.Where(m => m.MessageType == selectedType || m.MessageType == null || m.MessageType == "");
+                }
+                else
+                {
+                    query = query.Where(m => m.MessageType == selectedType);
+                }
+            }
 
             if (startDate.HasValue)
             {
@@ -54,6 +70,7 @@ namespace MessageProxyApi.Controllers
                 TotalCount = totalCount,
                 StartDate = startDate,
                 EndDate = endDate,
+                MessageType = selectedType,
                 Messages = messageLogs
             };
 
