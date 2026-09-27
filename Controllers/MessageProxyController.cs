@@ -13,6 +13,25 @@ namespace MessageProxyApi.Controllers
     [Route("api/[controller]")]
     public class MessageProxyController : ControllerBase
     {
+        /// <summary>
+        /// Headers whose values may carry credentials and so are never written to the log.
+        /// </summary>
+        private static readonly HashSet<string> SensitiveHeaders = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "Authorization",
+            "Proxy-Authorization",
+            "AuthId",
+            "Cookie",
+            "Set-Cookie",
+            "x-auth-token",
+            "x-api-key",
+            "api-key",
+            "apikey",
+            "x-functions-key",
+            "x-csrf-token",
+            "x-xsrf-token"
+        };
+
         private readonly ILogger<MessageProxyController> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
@@ -47,9 +66,36 @@ namespace MessageProxyApi.Controllers
             var contentType = string.IsNullOrWhiteSpace(Request.ContentType)
                 ? "application/xml"
                 : Request.ContentType.Split(';')[0].Trim();
-
             return await ProxyMessageAsync(_configuration["ProxyServiceUrls:CDFA"], CProxyMessage.CdfaMessageType,
                 contentType, _configuration["config:CDFAAuthKey"], "AuthID");
+        }
+
+        /// <summary>
+        /// Renders the incoming headers as a single log-friendly string, replacing the value of any header
+        /// that could hold a credential with a placeholder. Authorization keeps its scheme, which is useful
+        /// for diagnosing callers and is not itself a secret.
+        /// </summary>
+        private static string DescribeHeaders(IHeaderDictionary headers)
+        {
+            var described = headers.Select(header =>
+            {
+                if (!SensitiveHeaders.Contains(header.Key))
+                {
+                    return $"{header.Key}: {header.Value}";
+                }
+
+                // For "Scheme credentials" style values, keep the scheme only.
+                var value = header.Value.ToString();
+                var separator = value.IndexOf(' ');
+                if (string.Equals(header.Key, "Authorization", StringComparison.OrdinalIgnoreCase) && separator > 0)
+                {
+                    return $"{header.Key}: {value.Substring(0, separator)} [redacted]";
+                }
+
+                return $"{header.Key}: [redacted]";
+            });
+
+            return string.Join("; ", described);
         }
 
         /// <summary>
@@ -65,6 +111,9 @@ namespace MessageProxyApi.Controllers
                     _logger.LogError("{MessageType} service URL is not configured.", messageType);
                     return StatusCode(500, new { error = $"{messageType} service URL is not configured." });
                 }
+
+                _logger.LogInformation("{MessageType} request headers: {Headers}", messageType,
+                    DescribeHeaders(Request.Headers));
 
                 using var reader = new StreamReader(Request.Body, Encoding.UTF8);
                 string body = await reader.ReadToEndAsync();
