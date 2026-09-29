@@ -32,6 +32,20 @@ namespace MessageProxyApi.Controllers
             "x-xsrf-token"
         };
 
+        /// <summary>
+        /// Name of the header on the incoming message that carries the CDFA URL to proxy to.
+        /// </summary>
+        private const string CdfaUrlHeaderName = "cdfaUrl";
+
+        /// <summary>
+        /// Configuration keys holding the CDFA URLs a message is allowed to name.
+        /// </summary>
+        private static readonly string[] CdfaUrlConfigKeys =
+        {
+            "ProxyServiceUrls:CDFA",
+            "ProxyServiceUrls:CDFAReceipt"
+        };
+
         private readonly ILogger<MessageProxyController> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
@@ -62,12 +76,67 @@ namespace MessageProxyApi.Controllers
         [HttpPost("CDFA")]
         public async Task<IActionResult> ProxyCdfaMessage()
         {
+            var allowedUrls = CdfaUrlConfigKeys
+                .Select(key => _configuration[key]?.Trim())
+                .Where(url => !string.IsNullOrWhiteSpace(url))
+                .ToList();
+
+            if (allowedUrls.Count == 0)
+            {
+                _logger.LogError("{MessageType} service URL is not configured.", CProxyMessage.CdfaMessageType);
+                return StatusCode(500, new { error = $"{CProxyMessage.CdfaMessageType} service URL is not configured." });
+            }
+
+            // The destination comes in on the message rather than from configuration, so it has to be one of
+            // the configured URLs before we forward the body and our CDFA credential to it.
+            if (!TryGetAllowedCdfaUrl(allowedUrls, out var serviceUrl))
+            {
+                return BadRequest(new { error = $"The {CdfaUrlHeaderName} header is missing or is not an allowed CDFA URL." });
+            }
+
             // Pass the caller's content type through to CDFA, falling back to XML when it isn't supplied.
             var contentType = string.IsNullOrWhiteSpace(Request.ContentType)
                 ? "application/xml"
                 : Request.ContentType.Split(';')[0].Trim();
-            return await ProxyMessageAsync(_configuration["ProxyServiceUrls:CDFA"], CProxyMessage.CdfaMessageType,
+            return await ProxyMessageAsync(serviceUrl, CProxyMessage.CdfaMessageType,
                 contentType, _configuration["config:CDFAAuthKey"], "AuthID");
+        }
+
+        /// <summary>
+        /// Reads the CDFA URL off the incoming message and accepts it only when it matches one of the
+        /// configured CDFA URLs. Anything else is rejected.
+        /// </summary>
+        private bool TryGetAllowedCdfaUrl(IEnumerable<string?> allowedUrls, out string? serviceUrl)
+        {
+            serviceUrl = null;
+
+            if (!Request.Headers.TryGetValue(CdfaUrlHeaderName, out var headerValues) || headerValues.Count != 1)
+            {
+                _logger.LogError("{MessageType} request did not supply exactly one {HeaderName} header.",
+                    CProxyMessage.CdfaMessageType, CdfaUrlHeaderName);
+                return false;
+            }
+
+            var candidate = headerValues[0]?.Trim();
+            if (string.IsNullOrWhiteSpace(candidate))
+            {
+                _logger.LogError("{MessageType} {HeaderName} header is empty.", CProxyMessage.CdfaMessageType,
+                    CdfaUrlHeaderName);
+                return false;
+            }
+
+            // Return the configured spelling rather than the caller's, so only URLs we control are sent to.
+            serviceUrl = allowedUrls.FirstOrDefault(url =>
+                string.Equals(candidate, url, StringComparison.OrdinalIgnoreCase));
+
+            if (serviceUrl is null)
+            {
+                _logger.LogError("{MessageType} {HeaderName} header is not an allowed CDFA URL: {Url}",
+                    CProxyMessage.CdfaMessageType, CdfaUrlHeaderName, candidate);
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
