@@ -66,6 +66,7 @@ namespace MessageProxyApi.Controllers
         [HttpPost]
         public async Task<IActionResult> ProxyMessage()
         {
+            LogRequestHeaders(CProxyMessage.NahlnMessageType);
             return await ProxyMessageAsync(_configuration["ProxyServiceUrls:NAHLN"], CProxyMessage.NahlnMessageType,
                 "application/xml", _configuration["config:NAHLNAPIKey"], "x-auth-token");
         }
@@ -76,6 +77,9 @@ namespace MessageProxyApi.Controllers
         [HttpPost("CDFA")]
         public async Task<IActionResult> ProxyCdfaMessage()
         {
+            // Logged up front so the headers are on record even when the request is rejected below.
+            LogRequestHeaders(CProxyMessage.CdfaMessageType);
+
             var allowedUrls = CdfaUrlConfigKeys
                 .Select(key => _configuration[key]?.Trim())
                 .Where(url => !string.IsNullOrWhiteSpace(url))
@@ -140,6 +144,16 @@ namespace MessageProxyApi.Controllers
         }
 
         /// <summary>
+        /// Logs the incoming headers. Called at the start of each action so they are recorded before any
+        /// validation can reject the request.
+        /// </summary>
+        private void LogRequestHeaders(string messageType)
+        {
+            _logger.LogInformation("{MessageType} request headers: {Headers}", messageType,
+                DescribeHeaders(Request.Headers));
+        }
+
+        /// <summary>
         /// Renders the incoming headers as a single log-friendly string, replacing the value of any header
         /// that could hold a credential with a placeholder. Authorization keeps its scheme, which is useful
         /// for diagnosing callers and is not itself a secret.
@@ -180,9 +194,6 @@ namespace MessageProxyApi.Controllers
                     _logger.LogError("{MessageType} service URL is not configured.", messageType);
                     return StatusCode(500, new { error = $"{messageType} service URL is not configured." });
                 }
-
-                _logger.LogInformation("{MessageType} request headers: {Headers}", messageType,
-                    DescribeHeaders(Request.Headers));
 
                 using var reader = new StreamReader(Request.Body, Encoding.UTF8);
                 string body = await reader.ReadToEndAsync();
